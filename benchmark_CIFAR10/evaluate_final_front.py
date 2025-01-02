@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Add the root 'MARLIN' directory to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from neural_networks.MNIST.mnist_net import adapt_mnist_net
 from neural_networks.CIFAR10.resnet import resnet8, resnet14, resnet20, resnet32, resnet50, resnet56
 from neural_networks.utils import (get_loaders_split, evaluate_test_accuracy)
@@ -46,17 +52,37 @@ def get_args():
 
 def main():
     params = get_args()
-    train_args = {'epochs': params.epochs, 'lr_min': params.lr_min, 'lr_max': params.lr_max, 'batch': params.batch_size,
-                  'weight_decay': params.weight_decay, 'num_workers': params.num_workers, 'lr_momentum': params.lr_momentum}
+    train_args = {'epochs': params.epochs, 
+                  'lr_min': params.lr_min, 
+                  'lr_max': params.lr_max, 
+                  'batch': params.batch_size,
+                  'weight_decay': params.weight_decay, 
+                  'num_workers': params.num_workers, 
+                  'lr_momentum': params.lr_momentum}
+
     model_name = "./neural_networks/models/" + params.neural_network + "_quant_baseline_model.pth"
 
     torch.set_num_threads(params.threads)
 
     pkl_repo = './benchmark_CIFAR10/results_pkl/'
-    in_file = pkl_repo + params.neural_network + 'pareto_conf_' + str(params.generations) + '_' + str(params.population) + '_Pc' + str(int(params.crossover_probability * 10)) + '_Pm' + str(
-    int(params.mutation_probability * 10)) + '_seed1' + '.pkl'
-    f_file = pkl_repo + params.neural_network + 'pareto_res_' + str(params.generations) + '_' + str(params.population) + '_Pc' + str(int(params.crossover_probability * 10)) + '_Pm' + str(
-        int(params.mutation_probability * 10)) + '_seed1' + '.pkl'
+    in_file = pkl_repo + 
+              params.neural_network + 
+              'pareto_conf_' + 
+              str(params.generations) + '_' + 
+              str(params.population) + 
+              '_Pc' + str(int(params.crossover_probability * 10)) + 
+              '_Pm' + str(int(params.mutation_probability * 10)) + 
+              '_seed1' + '.pkl'
+
+    f_file = pkl_repo + 
+             params.neural_network + 
+             'pareto_res_' + 
+             str(params.generations) + '_' + 
+             str(params.population) + 
+             '_Pc' + str(int(params.crossover_probability * 10)) + 
+             '_Pm' + str(int(params.mutation_probability * 10)) + 
+             '_seed1' + '.pkl'
+
     print("loading last pareto front")
     file = open(in_file, 'rb')
     front_conf = pickle.load(file)
@@ -66,8 +92,11 @@ def main():
     front_valid_res = pickle.load(file)
     file.close()
 
-    imsize = (1,1,28,28) if (params.neural_network == 'mnist' or params.neural_network == 'fashionmnist' ) else (1,3,32,32)
-    approximate_linear = True if (params.neural_network == 'mnist' or params.neural_network == "fashionmnist") else False
+    imsize = (1,1,28,28) if (params.neural_network == 'mnist' or params.neural_network == 'fashionmnist' ) 
+    else (1,3,32,32)
+
+    approximate_linear = True if (params.neural_network == 'mnist' or params.neural_network == "fashionmnist") 
+    else False
 
     if params.neural_network == 'mnist' or params.neural_network == "fashionmnist":
         train_dataloader, valid_dataloader, test_dataloader = get_loaders_split(params.data_dir,
@@ -119,16 +148,26 @@ def main():
     max_power = GA_utils.max_power_net(mult_per_layer, power_list)
     _, test_acc = evaluate_test_accuracy(test_dataloader, model, device='cpu')
     print(f'Baseline test accuracy: {test_acc}\n Baseline energy: {max_power}')
+    print(params.just_plot)
 
     if params.just_plot:
-        f_file = pkl_repo + params.neural_network + 'final_res_' + str(params.generations) + '_' + str(params.population) + '_Pc' + str(int(params.crossover_probability * 10)) + '_Pm' + str(
-            int(params.mutation_probability * 10)) + '_seed1' + '.pkl'
+        f_file = pkl_repo + 
+        params.neural_network + 
+        'final_res_' + 
+        str(params.generations) + 
+        '_' + str(params.population) + 
+        '_Pc' + str(int(params.crossover_probability * 10)) + 
+        '_Pm' + str(int(params.mutation_probability * 10)) + 
+        '_seed1' + '.pkl'
+
         file = open(f_file, 'rb')
         front_test_res = pickle.load(file)
         file.close()
         Pareto_idx = []
 
-        for i, p in enumerate(front_test_res):  # find all points better than i in f1, and check whether they are better in f2
+        for i, p in enumerate(front_test_res):  # find all points better than i in f1, 
+                                                # and check whether they are better in f2
+
             C1 = []
             dom = False
 
@@ -148,6 +187,10 @@ def main():
         test_acc_par = np.empty(len(Pareto_idx))
         valid_ene_par = np.empty(len(Pareto_idx))
         valid_acc_par = np.empty(len(Pareto_idx))
+        print(len(front_conf))
+        print(len(front_valid_res))
+        print(len(front_test_res))
+
         for idx, i in enumerate(Pareto_idx):
             test_ene_par[idx] = front_test_res[i][0]
             test_acc_par[idx] = front_test_res[i][1]
@@ -163,19 +206,42 @@ def main():
             design = front_conf[i]
             print(design)
             model.load_state_dict(checkpoint['model_state_dict'])
-            adapt_model_9x9(model, design, axx_linear=approximate_linear, retrain_type=params.retrain_type)
-            front_test_res[i][1] = GA_utils.evaluate_accuracy(model, train_dataloader, test_dataloader, train_args, partial=False, partial_val=params.partial_val, test_only=False)
+            adapt_model_9x9(model, 
+                            design, 
+                            axx_linear=approximate_linear, 
+                            retrain_type=params.retrain_type)
 
-            front_test_res[i][0] = GA_utils.evaluate_power(mult_per_layer, power_list, max_power, design)
+            front_test_res[i][1] = GA_utils.evaluate_accuracy(model, 
+                                                              train_dataloader, 
+                                                              test_dataloader, 
+                                                              train_args, 
+                                                              partial=False, 
+                                                              partial_val=params.partial_val, 
+                                                              test_only=False)
+
+            front_test_res[i][0] = GA_utils.evaluate_power(mult_per_layer, 
+                                                           power_list, 
+                                                           max_power, 
+                                                           design)
+
             model.load_state_dict(checkpoint['model_state_dict'])
-            print(f"evaluated design {i + 1} out of {len(front_conf)} || energy is: {front_valid_res[i][0]} || pre train test acc is: {front_valid_res[i][1]} || post train test acc is: {front_test_res[i][1]} || time is: {(time.time() - design_time)}")
+            print(f"evaluated design {i + 1} out of {len(front_conf)} || 
+                    energy is: {front_valid_res[i][0]} || 
+                    pre train test acc is: {front_valid_res[i][1]} || 
+                    post train test acc is: {front_test_res[i][1]} || 
+                    time is: {(time.time() - design_time)}")
 
         total_time = time.time()-start_time
         print(f'Total time: {total_time}, average time per iteration:{total_time/len(front_conf)}')
 
-        f_file = pkl_repo + params.neural_network + 'final_res_' + str(params.generations) + '_' + str(params.population) + '_Pc' + str(
-            int(params.crossover_probability * 10)) + '_Pm' + str(
-            int(params.mutation_probability * 10)) + '_seed1' + '.pkl'
+        f_file = pkl_repo + 
+                 params.neural_network + 
+                 'final_res_' + 
+                 str(params.generations) + 
+                 '_' + str(params.population) + 
+                 '_Pc' + str(int(params.crossover_probability * 10)) + 
+                 '_Pm' + str(int(params.mutation_probability * 10)) + 
+                 '_seed1' + '.pkl'
 
         file = open(f_file, 'wb')
         pickle.dump(front_test_res, file)
@@ -197,7 +263,8 @@ def main():
     if params.just_plot:
         line1 = plt.plot(valid_acc_par, valid_ene_par, 'rx', linewidth=1.0,
                          label="Dominant solutions Pareto Pre training")
-        line2 = plt.plot(test_acc_par, test_ene_par, 'bP', linewidth=1.0, label="Dominant solutions post training")
+        line2 = plt.plot(test_acc_par, test_ene_par, 'bP', linewidth=1.0, 
+                         label="Dominant solutions post training")
     else:
         line1 = plt.plot(front_test_res[:, 1], front_test_res[:, 0], 'bP', linewidth=1.0,
                          label="Post Training Test results NSGA")
@@ -214,15 +281,43 @@ def main():
     Path('./benchmark_CIFAR10/results_fig/').mkdir(parents=True, exist_ok=True)
     plt.grid(True)
     if params.just_plot:
-        plt.savefig('./benchmark_CIFAR10/results_fig/' + params.neural_network + '_accuracy_vs_power' + '_Ng' + str(params.generations) + '_Np' + str(params.population) + '_Pc' + str(params.crossover_probability) + '_Pm' + str(params.mutation_probability) + '_dominant.pdf')
+        plt.savefig('./benchmark_CIFAR10/results_fig/' + 
+                      params.neural_network + 
+                      '_accuracy_vs_power' + 
+                      '_Ng' + str(params.generations) + 
+                      '_Np' + str(params.population) + 
+                      '_Pc' + str(params.crossover_probability) + 
+                      '_Pm' + str(params.mutation_probability) + 
+                      '_dominant.pdf')
 
         tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save('./benchmark_CIFAR10/results_fig/' + params.neural_network + '_accuracy_vs_power' + '_Ng' + str(params.generations) + '_Np' + str(params.population) + '_Pc' + str(params.crossover_probability) + '_Pm' + str(params.mutation_probability) + "_dominant.tex")
+        tikzplotlib.save('./benchmark_CIFAR10/results_fig/' 
+                         + params.neural_network + 
+                         '_accuracy_vs_power' + 
+                         '_Ng' + str(params.generations) + 
+                         '_Np' + str(params.population) + 
+                         '_Pc' + str(params.crossover_probability) + 
+                         '_Pm' + str(params.mutation_probability) + 
+                         "_dominant.tex")
     else:
-        plt.savefig('./benchmark_CIFAR10/results_fig/' + params.neural_network + '_accuracy_vs_power' + '_Ng' + str(params.generations) + '_Np' + str(params.population) + '_Pc' + str(params.crossover_probability) + '_Pm' + str(params.mutation_probability) + '.pdf')
+        plt.savefig('./benchmark_CIFAR10/results_fig/' 
+                    + params.neural_network + 
+                    '_accuracy_vs_power' + 
+                    '_Ng' + str(params.generations) + 
+                    '_Np' + str(params.population) + 
+                    '_Pc' + str(params.crossover_probability) + 
+                    '_Pm' + str(params.mutation_probability) + 
+                    '.pdf')
 
         tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save('./benchmark_CIFAR10/results_fig/' + params.neural_network + '_accuracy_vs_power' + '_Ng' + str(params.generations) + '_Np' + str(params.population) + '_Pc' + str(params.crossover_probability) + '_Pm' + str(params.mutation_probability) + ".tex")
+        tikzplotlib.save('./benchmark_CIFAR10/results_fig/' + 
+                           params.neural_network + 
+                           '_accuracy_vs_power' + 
+                           '_Ng' + str(params.generations) + 
+                           '_Np' + str(params.population) + 
+                           '_Pc' + str(params.crossover_probability) + 
+                           '_Pm' + str(params.mutation_probability) + 
+                           ".tex")
     plt.show()
 
 
