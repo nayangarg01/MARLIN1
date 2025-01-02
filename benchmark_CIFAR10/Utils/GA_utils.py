@@ -1,3 +1,8 @@
+import sys
+import os
+
+# Add the root 'MARLIN' directory to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import torch
 import torch.nn as nn
 import numpy as np
@@ -5,8 +10,8 @@ import random
 from neural_networks.adapt.approx_layers import axx_layers as approxNN
 from neural_networks.CIFAR10.resnet import ResidualModule
 from neural_networks.utils import evaluate_test_accuracy
-import riscv_characterization.vendor.nemo as nemo
-import riscv_characterization.nemo_training_quantization.utils as nemo_utils
+#import riscv_characterization.vendor.nemo as nemo
+#import riscv_characterization.nemo_training_quantization.utils as nemo_utils
 
 # TODO: controllare dependencies e isinstance che ci sia nemo dappertutto
 
@@ -127,6 +132,8 @@ def evaluate_accuracy(model, train_data, test_data, train_args, test_only=False,
                 train_loss += loss.item() * y.size(0)
                 train_acc += (output.max(1)[1] == y).sum().item()
                 train_n += y.size(0)
+
+        test_loss, test_acc = evaluate_test_accuracy(test_data, model, device)
     elif nemo:
         loss_fn = nn.NLLLoss()
         
