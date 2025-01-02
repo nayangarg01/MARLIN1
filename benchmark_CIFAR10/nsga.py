@@ -1,3 +1,8 @@
+import sys
+import os
+
+# Add the root 'MARLIN' directory to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from pymoo.optimize import minimize
 from neural_networks.MNIST.mnist_net import adapt_mnist_net
 from neural_networks.CIFAR10.resnet import resnet8, resnet14, resnet20, resnet32, resnet50, resnet56
@@ -50,22 +55,50 @@ def get_args():
 
 def main():
     params = get_args()
+    train_args = {'epochs': params.epochs, 
+                  'lr_min': params.lr_min, 
+                  'lr_max': params.lr_max, 
+                  'batch': params.batch_size,
+                  'weight_decay': params.weight_decay, 
+                  'num_workers': params.num_workers, 
+                  'lr_momentum': params.lr_momentum}
 
-    train_args = {'epochs': params.epochs, 'lr_min': params.lr_min, 'lr_max': params.lr_max, 'batch': params.batch_size,
-                  'weight_decay': params.weight_decay, 'num_workers': params.num_workers, 'lr_momentum': params.lr_momentum}
     model_name = "./neural_networks/models/" + params.neural_network + "_quant_baseline_model.pth"
 
     torch.set_num_threads(params.threads)
 
     pkl_repo = './benchmark_CIFAR10/results_pkl/'
-    Path(pkl_repo).mkdir(parents=True, exist_ok=True)
-    in_file = pkl_repo + params.neural_network +'pareto_conf_'+ str(params.generations) + '_' + str(params.population) + '_Pc' + str(int(params.crossover_probability*10)) +'_Pm' + str(int(params.mutation_probability*10)) + '_seed1' + '.pkl'
-    f_file = pkl_repo + params.neural_network + 'pareto_res_' + str(params.generations) +'_' + str(params.population) +'_Pc' + str(int(params.crossover_probability*10)) +'_Pm' + str(int(params.mutation_probability*10)) +'_seed1'+ '.pkl'
+    in_file = pkl_repo + 
+              params.neural_network + 
+              'pareto_conf_' + 
+              str(params.generations) + '_' + 
+              str(params.population) + 
+              '_Pc' + str(int(params.crossover_probability * 10)) + 
+              '_Pm' + str(int(params.mutation_probability * 10)) + 
+              '_seed1' + '.pkl'
 
-    imsize = (1,1,28,28) if (params.neural_network == 'mnist' or params.neural_network == 'fashionmnist' ) else (1,3,32,32)
+    f_file = pkl_repo + 
+             params.neural_network + 
+             'pareto_res_' + 
+             str(params.generations) + '_' + 
+             str(params.population) + 
+             '_Pc' + str(int(params.crossover_probability * 10)) + 
+             '_Pm' + str(int(params.mutation_probability * 10)) + 
+             '_seed1' + '.pkl'
+
+
+    imsize = (1,1,28,28) if (params.neural_network == 'mnist' or params.neural_network == 'fashionmnist' ) 
+    else (1,3,32,32)
+
     if params.start_from_last:
         print("loading last pareto front")
-        file = open(pkl_repo + params.neural_network +'_backup_'+ str(params.generations) + '_' + str(params.population) + '_Pc' + str(int(params.crossover_probability*10)) +'_Pm' + str(int(params.mutation_probability*10)) + '_seed1' + '.pkl', 'rb')
+        file = open(pkl_repo + params.neural_network + 
+        '_backup_'+ str(params.generations) + 
+        '_' + str(params.population) + 
+        '_Pc' + str(int(params.crossover_probability*10)) +
+        '_Pm' + str(int(params.mutation_probability*10)) + 
+        '_seed1' + '.pkl', 'rb')
+
         last_design = pickle.load(file)
         file.close()
 
@@ -80,8 +113,22 @@ def main():
                     designs[i] = last_design['designs'][i]
 
             print(f"current gen is {self.data['current_gen']+1} out of {params.generations}")
-            file = open(pkl_repo + params.neural_network +'_backup_'+ str(params.generations) + '_' + str(params.population) + '_Pc' + str(int(params.crossover_probability*10)) +'_Pm' + str(int(params.mutation_probability*10)) + '_seed1' + '.pkl', 'wb')
-            pickle.dump({'designs':designs, 'current_gen':self.data['current_gen'], 'Ng':params.generations, 'Np':params.population, 'Pc':params.crossover_probability, 'Pm':params.mutation_probability, 'net':params.neural_network}, file)
+            file = open(pkl_repo + 
+                        params.neural_network +
+                        '_backup_'+ str(params.generations) + 
+                        '_' + str(params.population) + 
+                        '_Pc' + str(int(params.crossover_probability*10)) +
+                        '_Pm' + str(int(params.mutation_probability*10)) + 
+                        '_seed1' + '.pkl', 'wb')
+
+            pickle.dump({'designs':designs, 
+                         'current_gen':self.data['current_gen'], 
+                         'Ng':params.generations, 
+                         'Np':params.population, 
+                         'Pc':params.crossover_probability, 
+                         'Pm':params.mutation_probability, 
+                         'net':params.neural_network}, file)
+
             file.close()
             for i in range(len(designs)):
                 design_time = time.time()
@@ -99,17 +146,36 @@ def main():
                     # print(design)
                     checkpoint = torch.load(model_name, map_location='cpu')
                     model.load_state_dict(checkpoint['model_state_dict'])
-                    adapt_model_9x9(model, design, axx_linear=params.axx_linear, retrain_type='full')  # model becomes adapt model
+                    adapt_model_9x9(model, 
+                                    design, 
+                                    axx_linear=params.axx_linear, 
+                                    retrain_type='full')  
+                    # model becomes adapt model
                     # design is an individual, fitness function is the function to optimize
-                    f1 = GA_utils.evaluate_power(mult_per_layer, power_list, max_power, design)
-                    f2 = 1/GA_utils.evaluate_accuracy(model, train_dataloader, valid_dataloader, train_args, test_only=False, partial=True, partial_val=params.partial_val)
+                    f1 = GA_utils.evaluate_power(mult_per_layer, 
+                                                 power_list, 
+                                                 max_power, 
+                                                 design)
+
+                    f2 = 1/GA_utils.evaluate_accuracy(model, 
+                                                      train_dataloader, 
+                                                      valid_dataloader, 
+                                                      train_args, 
+                                                      test_only=False, 
+                                                      partial=True, 
+                                                      partial_val=params.partial_val)
+
                     self.data['previous_designs_results']['design_id']['f1'] = f1
                     self.data['previous_designs_results']['design_id']['f2'] = f2
                 res1.append(f1)
                 res2.append(f2)
 
                 # print(f"evaluated design {i+1} out of {len(designs)}, time is {(time.time() - design_time)}")
-                print(f"design: {i + 1}/{len(designs)} || gen: {self.data['current_gen']+1}/{params.generations} || energy is: {(100*f1):0.2f} || valid acc is: {(100/f2):0.2f}|| time is: {(time.time() - design_time):0.2f}")
+                print(f"design: {i + 1}/{len(designs)} || 
+                        gen: {self.data['current_gen']+1}/{params.generations} || 
+                        energy is: {(100*f1):0.2f} || 
+                        valid acc is: {(100/f2):0.2f}|| 
+                        time is: {(time.time() - design_time):0.2f}")
 
 
             out['F'] = np.column_stack([ np.array(res1), np.array(res2)])
@@ -156,25 +222,50 @@ def main():
 
     norm_power_file = './benchmark_CIFAR10/mult_energy.txt'
 
-    n_appr_levels, n_levels = GA_utils.encode_chromosome(model, axx_linear=params.axx_linear, n_appr_levels=params.axx_levels)
+    n_appr_levels, n_levels = GA_utils.encode_chromosome(model, 
+                                                         axx_linear=params.axx_linear, 
+                                                         n_appr_levels=params.axx_levels)
+
     print(n_appr_levels, n_levels)
     xl = 0  
-    mult_per_layer = GA_utils.list_mult_per_layer(model, imsize=imsize, axx_linear=params.axx_linear)
+    mult_per_layer = GA_utils.list_mult_per_layer(model, 
+                                                  imsize=imsize, 
+                                                  axx_linear=params.axx_linear)
+
+    
 
     power_list = GA_utils.mult_power_list(norm_power_file)
+    #gives power at approx level 0
     max_power = GA_utils.max_power_net(mult_per_layer, power_list)
 
+    #evaluate baseline accuracy and loss of the model on the dataset
     test_loss, test_acc = evaluate_test_accuracy(test_dataloader, model, device='cpu')
-    print(f'Baseline test accuracy: {test_acc}')
-    problem = ProblemWrapper(n_var=n_levels, n_obj=2, xl=xl, xu=params.axx_levels, vtype=int, mult_per_layer=mult_per_layer, power_list=power_list, max_power=max_power, model=model, max_acc=test_acc, current_gen=0, previous_designs_results={})
 
-    algorithm = NSGA2(pop_size=params.population, sampling=IntegerRandomSampling(),
+    print(f'Baseline test accuracy: {test_acc}')
+    problem = ProblemWrapper(n_var=n_levels, 
+                             n_obj=2, 
+                             xl=xl, 
+                             xu=params.axx_levels, 
+                             vtype=int, 
+                             mult_per_layer=mult_per_layer, 
+                             power_list=power_list, 
+                             max_power=max_power, 
+                             model=model, 
+                             max_acc=test_acc, 
+                             current_gen=0, 
+                             previous_designs_results={})
+
+    algorithm = NSGA2(pop_size=params.population, 
+                      sampling=IntegerRandomSampling(),
                       crossover=SinglePointCrossover(prob=params.crossover_probability, repair=RoundingRepair()),
                       mutation=PM(prob=params.mutation_probability, eta=3.0, vtype=float, repair=RoundingRepair()),)
 
     stop_criteria = ('n_gen', params.generations)
 
-    results = minimize(problem=problem, algorithm=algorithm, seed=1, termination=stop_criteria)
+    results = minimize(problem=problem, 
+                       algorithm=algorithm, 
+                       seed=1, 
+                       termination=stop_criteria)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
