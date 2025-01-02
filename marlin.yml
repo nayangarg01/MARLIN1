@@ -163,7 +163,8 @@ dependencies:
       - dill==0.3.7
       - future==0.18.3
       - grapheme==0.6.0
-      - netron==7.1.9
+      #- netron==7.1.9
+      - netron==7.8.9
       - pymoo==0.6.0.1
       - scipy==1.11.2
       - tikzplotlib==0.10.1
